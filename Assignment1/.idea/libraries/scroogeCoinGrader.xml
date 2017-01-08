@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="scroogeCoinGrader">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/Assignment1/libs/scroogeCoinGrader.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/Assignment1/libs/scroogeCoinGrader.jar!/" />
+    </SOURCES>
+  </library>
+</component>
