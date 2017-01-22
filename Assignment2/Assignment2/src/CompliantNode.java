@@ -1,17 +1,16 @@
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /* CompliantNode refers to a node that follows the rules (not malicious)*/
 public class CompliantNode implements Node {
 
     private boolean[] followees;
-    private Set<Transaction> observedTransactions;
+    private Set<Transaction> consensusTransactions;
+    private Map<Transaction, Integer> observedTransactions;
 
     public CompliantNode(double p_graph, double p_malicious, double p_txDistribution, int numRounds) {
-        this.observedTransactions = new HashSet<Transaction>(){};
+        this.consensusTransactions = new HashSet<Transaction>(){};
+        this.observedTransactions = new HashMap<Transaction,Integer>();
     }
 
     public void setFollowees(boolean[] followees) {
@@ -19,29 +18,53 @@ public class CompliantNode implements Node {
     }
 
     public void setPendingTransaction(Set<Transaction> pendingTransactions) {
-        this.observedTransactions = pendingTransactions;
+        consensusTransactions = pendingTransactions;
+        UpdateObservedTxCounterFor((pendingTransactions.stream().collect(Collectors.toList())));
     }
 
-    @Override
+    private void UpdateObservedTxCounterFor(List<Transaction> transactions) {
+        transactions.forEach(tx -> observedTransactions.put(tx, observedTransactions.getOrDefault(tx, 0) + 1));
+    }
+
     public Set<Transaction> getProposals() {
-        return observedTransactions;
+        return consensusTransactions;
     }
 
-    @Override
     public void receiveCandidates(ArrayList<Integer[]> candidates) {
-        Set<Transaction> transactions = candidates.stream()
-                .mapToInt(candidate -> candidate[0])
-                .mapToObj(id -> new Transaction(id))
-                .collect(Collectors.toSet());
-        observedTransactions.addAll(transactions);
+        List<Transaction> transactions = candidates.stream()
+                                        .mapToInt(candidate -> candidate[0])
+                                        .mapToObj(id -> new Transaction(id))
+                                        .collect(Collectors.toList());
+
+        UpdateObservedTxCounterFor(transactions);
+        UpdateConsensusTransactions();
+    }
+
+    private void UpdateConsensusTransactions() {
+        Set<Transaction> transactionsSeenAtLeastTwice = GetTransactionsSeenAtLeast(2);
+        consensusTransactions.addAll(transactionsSeenAtLeastTwice);
+    }
+
+    private Set<Transaction> GetTransactionsSeenAtLeast(int n) {
+        Set<Transaction> transactionsSeenAtLeastTwice = observedTransactions.entrySet().stream()
+                                                        .filter(entry -> entry.getValue() >= n)
+                                                        .map(entry -> entry.getKey())
+                                                        .collect(Collectors.toSet());
+
+        transactionsSeenAtLeastTwice.forEach(tx -> observedTransactions.remove(tx));
+        return transactionsSeenAtLeastTwice;
     }
 
     public Set<Transaction> sendToFollowers() {
-        return observedTransactions;
+        return consensusTransactions;
     }
 
     public void receiveFromFollowees(Set<Candidate> candidates) {
-        Stream<Transaction> stream = candidates.stream().map(candidate -> candidate.tx).distinct();
-        observedTransactions.addAll(stream.collect(Collectors.toSet()));
+        List<Transaction> transactions = candidates.stream()
+                                        .map(candidate -> candidate.tx)
+                                        .distinct()
+                                        .collect(Collectors.toList());
+        UpdateObservedTxCounterFor(transactions);
+        UpdateConsensusTransactions();
     }
 }
