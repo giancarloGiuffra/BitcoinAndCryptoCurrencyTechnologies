@@ -2,27 +2,34 @@
 // You should not have all the blocks added to the block chain in memory 
 // as it would cause a memory overflow.
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class BlockChain {
     public static final int CUT_OFF_AGE = 10;
-    private BlockChainNode chain;
+    private Map<byte[], BlockChainNode> chain;
 
     /**
      * create an empty block chain with just a genesis block. Assume {@code genesisBlock} is a valid
      * block
      */
     public BlockChain(Block genesisBlock) {
-        this.chain = new BlockChainNode(genesisBlock);
+        UTXOPool genesisUTXOPool = new UTXOPool();
+        Transaction genesisCoinBaseTx = genesisBlock.getCoinbase();
+        genesisUTXOPool.addUTXO(new UTXO(genesisCoinBaseTx.getHash(), 0), genesisCoinBaseTx.getOutput(0));
+        this.chain = new HashMap<byte[], BlockChainNode>(){{
+            put(genesisBlock.getHash(), new BlockChainNode(genesisBlock, genesisUTXOPool, 0));
+        }};
     }
 
     /** Get the maximum height block */
     public Block getMaxHeightBlock() {
-        return chain.getBlock();
+        return chain.values().stream().findFirst().get().getBlock();
     }
 
     /** Get the UTXOPool for mining a new block on top of max height block */
     public UTXOPool getMaxHeightUTXOPool() {
-        // IMPLEMENT THIS
-        return null;
+        return chain.values().stream().findFirst().get().getUtxoPool();
     }
 
     /** Get the transaction pool to mine a new block */
