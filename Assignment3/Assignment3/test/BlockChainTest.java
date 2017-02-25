@@ -26,6 +26,7 @@ public class BlockChainTest {
     public void ShouldAddValidBlockOverGenesisBlock() throws Exception {
         KeyPair genesisPair = KeyPair();
         Block genesisBlock = new Block(null, genesisPair.getPublic());
+        genesisBlock.finalize();
         BlockChain blockChain = new BlockChain(genesisBlock);
 
         KeyPair keyPair = KeyPair();
@@ -42,14 +43,15 @@ public class BlockChainTest {
     private Transaction TransactionSpendingAllCoinBase(Block block, KeyPair blockMiner, KeyPair receiver) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         Transaction tx = new Transaction();
         tx.addInput(block.getCoinbase().getHash(), 0);
+        tx.addOutput(25, receiver.getPublic());
         Signature signature = SignatureForSingleInputTx(tx, blockMiner);
         tx.addSignature(signature.sign(), 0);
-        tx.addOutput(25, receiver.getPublic());
+        tx.finalize();
         return tx;
     }
 
     private Signature SignatureForSingleInputTx(Transaction singleInputTx, KeyPair keyPair) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        Signature signature = Signature.getInstance("SHA1withRSA");
+        Signature signature = Signature.getInstance("SHA256withRSA");
         signature.initSign(keyPair.getPrivate());
         signature.update(singleInputTx.getRawDataToSign(0));
         return signature;
@@ -57,7 +59,7 @@ public class BlockChainTest {
 
     private KeyPair KeyPair() throws NoSuchAlgorithmException {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(1024, SecureRandom.getInstance("SHA1PRNG"));
+        generator.initialize(2048, new SecureRandom());
         return generator.generateKeyPair();
     }
 

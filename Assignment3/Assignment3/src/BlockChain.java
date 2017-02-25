@@ -3,10 +3,12 @@
 // as it would cause a memory overflow.
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class BlockChain {
-    public static final int CUT_OFF_AGE = 10;
+    public static int CUT_OFF_AGE = 10;
+    private BlockChainNode highestNode;
     private Map<byte[], BlockChainNode> chain;
 
     /**
@@ -14,23 +16,26 @@ public class BlockChain {
      * block
      */
     public BlockChain(Block genesisBlock) {
+        UTXOPool genesisUTXOPool = GenesisUTXOPool(genesisBlock);
+        BlockChainNode genesisNode = new BlockChainNode(genesisBlock, genesisUTXOPool, 0);
+        this.chain = new HashMap<byte[], BlockChainNode>(){{ put(genesisBlock.getHash(), genesisNode); }};
+        this.highestNode = genesisNode;
+    }
+
+    private UTXOPool GenesisUTXOPool(Block genesisBlock) {
         UTXOPool genesisUTXOPool = new UTXOPool();
         Transaction genesisCoinBaseTx = genesisBlock.getCoinbase();
         genesisUTXOPool.addUTXO(new UTXO(genesisCoinBaseTx.getHash(), 0), genesisCoinBaseTx.getOutput(0));
-        this.chain = new HashMap<byte[], BlockChainNode>(){{
-            put(genesisBlock.getHash(), new BlockChainNode(genesisBlock, genesisUTXOPool, 0));
-        }};
+        return genesisUTXOPool;
     }
 
     /** Get the maximum height block */
     public Block getMaxHeightBlock() {
-        return chain.values().stream().findFirst().get().getBlock();
+        return highestNode.getBlock();
     }
 
     /** Get the UTXOPool for mining a new block on top of max height block */
-    public UTXOPool getMaxHeightUTXOPool() {
-        return chain.values().stream().findFirst().get().getUtxoPool();
-    }
+    public UTXOPool getMaxHeightUTXOPool() { return highestNode.getUtxoPool(); }
 
     /** Get the transaction pool to mine a new block */
     public TransactionPool getTransactionPool() {
@@ -51,8 +56,47 @@ public class BlockChain {
      * @return true if block is successfully added
      */
     public boolean addBlock(Block block) {
-        // IMPLEMENT THIS
+
+        if(NotFakeGenesis(block) && AllTransactionsAreValid(block) && HeightConditionIsVerified(block)){
+           ProcessBlock(block);
+           return true;
+        }
+
         return false;
+    }
+
+    private void ProcessBlock(Block block) {
+        BlockChainNode node = BuildBlockChainNode(block);
+        chain.put(block.getHash(), node);
+        UpdateHighestNode(node);
+    }
+
+    private void UpdateHighestNode(BlockChainNode node) {
+        if(highestNode.getHeight() < node.getHeight()){
+            highestNode = node;
+        }
+    }
+
+    private BlockChainNode BuildBlockChainNode(Block block) {
+        BlockChainNode parentNode = this.chain.get(block.getPrevBlockHash());
+        TxHandler txHandler = new TxHandler(parentNode.getUtxoPool());
+        txHandler.handleTxs(block.getTransactions());
+
+        return new BlockChainNode(block, txHandler.getUTXOPool(), parentNode.getHeight() + 1);
+    }
+
+    private boolean HeightConditionIsVerified(Block block) {
+        return true;
+    }
+
+    private boolean NotFakeGenesis(Block block) {
+        return block.getHash() != null;
+    }
+
+    private boolean AllTransactionsAreValid(Block block) {
+        BlockChainNode parentNode = this.chain.get(block.getPrevBlockHash());
+        List<Transaction> validTransactions = new TxHandler(parentNode.getUtxoPool()).handleTxs(block.getTransactions());
+        return validTransactions.size() == block.getTransactions().size();
     }
 
     /** Add a transaction to the transaction pool */

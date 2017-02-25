@@ -96,8 +96,8 @@ public class TxHandler {
                 .forEach(index -> utxoPool.addUTXO(new UTXO(tx.getHash(), index), tx.getOutputs().get(index)));
     }
 
-    private List<Transaction> handleTxs(ArrayList<Transaction> notAcceptedTransactions) {
-        return Arrays.asList(handleTxs(ToArray(notAcceptedTransactions)));
+    public List<Transaction> handleTxs(List<Transaction> transactions) {
+        return Arrays.asList(handleTxs(ToArray(transactions)));
     }
 
     protected Transaction[] ToArray(List<Transaction> transactions) {
