@@ -1,3 +1,6 @@
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.security.*;
@@ -6,6 +9,12 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class BlockChainTest {
+
+    @Before
+    @After
+    public void setUp() throws Exception {
+        BlockChain.CUT_OFF_AGE = 10;
+    }
 
     @Test
     public void ShouldCreateABlockChainWithOnlyAGenesisBlock() throws Exception {
@@ -61,6 +70,35 @@ public class BlockChainTest {
         assertThat(blockChain.addBlock(secondBlock), equalTo(true));
         assertThat(blockChain.getMaxHeightBlock().getHash(), equalTo(secondBlock.getHash()));
         assertThat(blockChain.getMaxHeightBlock().getCoinbase(), equalTo(new Transaction(25, secondKeyPair.getPublic())));
+    }
+
+    @Test
+    public void ShouldNotBeValidToAddBlockThatViolatesTheHeightConstraint() throws Exception {
+
+        BlockChain.CUT_OFF_AGE = 1;
+
+        KeyPair genesisPair = KeyPair();
+        Block genesisBlock = new Block(null, genesisPair.getPublic());
+        genesisBlock.finalize();
+        BlockChain blockChain = new BlockChain(genesisBlock);
+
+        KeyPair firstKeyPair = KeyPair();
+        Block firstBlock = new Block(genesisBlock.getHash(), firstKeyPair.getPublic());
+        firstBlock.finalize();
+        assertThat(blockChain.addBlock(firstBlock), equalTo(true));
+
+        KeyPair secondKeyPair = KeyPair();
+        Block secondBlock = new Block(firstBlock.getHash(), secondKeyPair.getPublic());
+        secondBlock.finalize();
+        assertThat(blockChain.addBlock(secondBlock), equalTo(true));
+
+        Block validHeightBlock = new Block(firstBlock.getHash(), KeyPair().getPublic());
+        validHeightBlock.finalize();
+        assertThat(blockChain.addBlock(validHeightBlock), equalTo(true));
+
+        Block invalidHeightBlock = new Block(genesisBlock.getHash(), KeyPair().getPublic());
+        invalidHeightBlock.finalize();
+        assertThat(blockChain.addBlock(invalidHeightBlock), equalTo(false));
     }
 
     private Transaction TransactionSpendingAllCoinBase(Block block, KeyPair blockMiner, KeyPair receiver) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {

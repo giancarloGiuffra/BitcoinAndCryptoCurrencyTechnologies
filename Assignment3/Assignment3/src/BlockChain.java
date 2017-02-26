@@ -77,7 +77,7 @@ public class BlockChain {
     }
 
     private BlockChainNode BuildBlockChainNode(Block block) {
-        BlockChainNode parentNode = this.chain.get(block.getPrevBlockHash());
+        BlockChainNode parentNode = chain.get(block.getPrevBlockHash());
         TxHandler txHandler = new TxHandler(parentNode.getUtxoPool());
         txHandler.handleTxs(block.getTransactions());
 
@@ -85,7 +85,8 @@ public class BlockChain {
     }
 
     private boolean HeightConditionIsVerified(Block block) {
-        return true;
+        BlockChainNode parentNode = chain.get(block.getPrevBlockHash());
+        return parentNode.getHeight() + 1 > highestNode.getHeight() - CUT_OFF_AGE;
     }
 
     private boolean NotFakeGenesis(Block block) {
@@ -93,7 +94,7 @@ public class BlockChain {
     }
 
     private boolean AllTransactionsAreValid(Block block) {
-        BlockChainNode parentNode = this.chain.get(block.getPrevBlockHash());
+        BlockChainNode parentNode = chain.get(block.getPrevBlockHash());
         List<Transaction> validTransactions = new TxHandler(parentNode.getUtxoPool()).handleTxs(block.getTransactions());
         return validTransactions.size() == block.getTransactions().size();
     }
