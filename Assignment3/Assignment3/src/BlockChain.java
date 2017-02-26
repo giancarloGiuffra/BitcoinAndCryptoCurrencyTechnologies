@@ -10,6 +10,7 @@ public class BlockChain {
     public static int CUT_OFF_AGE = 10;
     private BlockChainNode highestNode;
     private Map<byte[], BlockChainNode> chain;
+    private TransactionPool transactionPool;
 
     /**
      * create an empty block chain with just a genesis block. Assume {@code genesisBlock} is a valid
@@ -20,6 +21,7 @@ public class BlockChain {
         BlockChainNode genesisNode = new BlockChainNode(genesisBlock, genesisUTXOPool, 0);
         this.chain = new HashMap<byte[], BlockChainNode>(){{ put(genesisBlock.getHash(), genesisNode); }};
         this.highestNode = genesisNode;
+        this.transactionPool = new TransactionPool();
     }
 
     private UTXOPool UTXOPoolPlusCoinBaseUTXO(UTXOPool utxoPool, Block block) {
@@ -38,8 +40,7 @@ public class BlockChain {
 
     /** Get the transaction pool to mine a new block */
     public TransactionPool getTransactionPool() {
-        // IMPLEMENT THIS
-        return  null;
+        return  new TransactionPool(transactionPool);
     }
 
     /**
@@ -68,6 +69,11 @@ public class BlockChain {
         BlockChainNode node = BuildBlockChainNode(block);
         chain.put(block.getHash(), node);
         UpdateHighestNode(node);
+        RemoveTransactionsFromPool(block.getTransactions());
+    }
+
+    private void RemoveTransactionsFromPool(List<Transaction> txs) {
+        txs.forEach(tx -> transactionPool.removeTransaction(tx.getHash()));
     }
 
     private void UpdateHighestNode(BlockChainNode node) {
@@ -101,6 +107,6 @@ public class BlockChain {
 
     /** Add a transaction to the transaction pool */
     public void addTransaction(Transaction tx) {
-        // IMPLEMENT THIS
+        transactionPool.addTransaction(tx);
     }
 }

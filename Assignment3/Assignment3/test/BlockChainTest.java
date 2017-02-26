@@ -1,9 +1,10 @@
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.security.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -99,6 +100,38 @@ public class BlockChainTest {
         Block invalidHeightBlock = new Block(genesisBlock.getHash(), KeyPair().getPublic());
         invalidHeightBlock.finalize();
         assertThat(blockChain.addBlock(invalidHeightBlock), equalTo(false));
+    }
+
+    @Test
+    public void ShouldAddTransactionToPool() throws Exception {
+        KeyPair genesisPair = KeyPair();
+        Block genesisBlock = new Block(null, genesisPair.getPublic());
+        genesisBlock.finalize();
+        BlockChain blockChain = new BlockChain(genesisBlock);
+
+        Transaction tx = TransactionSpendingAllCoinBase(genesisBlock, genesisPair, KeyPair());
+        blockChain.addTransaction(tx);
+
+        assertThat(blockChain.getTransactionPool().getTransactions(), equalTo(new ArrayList<>(Arrays.asList(tx))));
+    }
+
+    @Test
+    public void ShouldEliminateTxFromPoolIfIncludedInSomeBlock() throws Exception {
+        KeyPair genesisPair = KeyPair();
+        Block genesisBlock = new Block(null, genesisPair.getPublic());
+        genesisBlock.finalize();
+        BlockChain blockChain = new BlockChain(genesisBlock);
+
+        Transaction tx = TransactionSpendingAllCoinBase(genesisBlock, genesisPair, KeyPair());
+        blockChain.addTransaction(tx);
+
+        KeyPair miner = KeyPair();
+        Block block = new Block(genesisBlock.getHash(), miner.getPublic());
+        block.addTransaction(tx);
+        block.finalize();
+        assertThat(blockChain.addBlock(block), equalTo(true));
+
+        assertThat(blockChain.getTransactionPool().getTransactions().isEmpty(), equalTo(true));
     }
 
     private Transaction TransactionSpendingAllCoinBase(Block block, KeyPair blockMiner, KeyPair receiver) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
