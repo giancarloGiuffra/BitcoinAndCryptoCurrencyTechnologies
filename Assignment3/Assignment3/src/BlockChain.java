@@ -57,12 +57,19 @@ public class BlockChain {
      */
     public boolean addBlock(Block block) {
 
-        if(NotFakeGenesis(block) && AllTransactionsAreValid(block) && HeightConditionIsVerified(block)){
+        if(NotFakeGenesis(block) &&
+                HasValidParent(block) &&
+                AllTransactionsAreValid(block) &&
+                HeightConditionIsVerified(block)){
            ProcessBlock(block);
            return true;
         }
 
         return false;
+    }
+
+    private boolean HasValidParent(Block block) {
+        return chain.containsKey(block.getPrevBlockHash());
     }
 
     private void ProcessBlock(Block block) {
