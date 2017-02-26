@@ -16,17 +16,16 @@ public class BlockChain {
      * block
      */
     public BlockChain(Block genesisBlock) {
-        UTXOPool genesisUTXOPool = GenesisUTXOPool(genesisBlock);
+        UTXOPool genesisUTXOPool = UTXOPoolPlusCoinBaseUTXO(new UTXOPool(), genesisBlock);
         BlockChainNode genesisNode = new BlockChainNode(genesisBlock, genesisUTXOPool, 0);
         this.chain = new HashMap<byte[], BlockChainNode>(){{ put(genesisBlock.getHash(), genesisNode); }};
         this.highestNode = genesisNode;
     }
 
-    private UTXOPool GenesisUTXOPool(Block genesisBlock) {
-        UTXOPool genesisUTXOPool = new UTXOPool();
-        Transaction genesisCoinBaseTx = genesisBlock.getCoinbase();
-        genesisUTXOPool.addUTXO(new UTXO(genesisCoinBaseTx.getHash(), 0), genesisCoinBaseTx.getOutput(0));
-        return genesisUTXOPool;
+    private UTXOPool UTXOPoolPlusCoinBaseUTXO(UTXOPool utxoPool, Block block) {
+        Transaction coinBaseTx = block.getCoinbase();
+        utxoPool.addUTXO(new UTXO(coinBaseTx.getHash(), 0), coinBaseTx.getOutput(0));
+        return utxoPool;
     }
 
     /** Get the maximum height block */
@@ -82,7 +81,7 @@ public class BlockChain {
         TxHandler txHandler = new TxHandler(parentNode.getUtxoPool());
         txHandler.handleTxs(block.getTransactions());
 
-        return new BlockChainNode(block, txHandler.getUTXOPool(), parentNode.getHeight() + 1);
+        return new BlockChainNode(block, UTXOPoolPlusCoinBaseUTXO(txHandler.getUTXOPool(), block), parentNode.getHeight() + 1);
     }
 
     private boolean HeightConditionIsVerified(Block block) {

@@ -40,6 +40,29 @@ public class BlockChainTest {
         assertThat(blockChain.getMaxHeightBlock().getCoinbase(), equalTo(new Transaction(25, keyPair.getPublic())));
     }
 
+    @Test
+    public void ShouldBeAbleToSpendCoinBaseTransactionInTheNextBlock() throws Exception {
+        KeyPair genesisPair = KeyPair();
+        Block genesisBlock = new Block(null, genesisPair.getPublic());
+        genesisBlock.finalize();
+        BlockChain blockChain = new BlockChain(genesisBlock);
+
+        KeyPair firstKeyPair = KeyPair();
+        Block firstBlock = new Block(genesisBlock.getHash(), firstKeyPair.getPublic());
+        firstBlock.finalize();
+        assertThat(blockChain.addBlock(firstBlock), equalTo(true));
+
+        KeyPair secondKeyPair = KeyPair();
+        Block secondBlock = new Block(firstBlock.getHash(), secondKeyPair.getPublic());
+        Transaction txSpendingPreviousCoinBase = TransactionSpendingAllCoinBase(firstBlock, firstKeyPair, secondKeyPair);
+        secondBlock.addTransaction(txSpendingPreviousCoinBase);
+        secondBlock.finalize();
+
+        assertThat(blockChain.addBlock(secondBlock), equalTo(true));
+        assertThat(blockChain.getMaxHeightBlock().getHash(), equalTo(secondBlock.getHash()));
+        assertThat(blockChain.getMaxHeightBlock().getCoinbase(), equalTo(new Transaction(25, secondKeyPair.getPublic())));
+    }
+
     private Transaction TransactionSpendingAllCoinBase(Block block, KeyPair blockMiner, KeyPair receiver) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         Transaction tx = new Transaction();
         tx.addInput(block.getCoinbase().getHash(), 0);
